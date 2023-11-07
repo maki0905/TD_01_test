@@ -6,6 +6,8 @@
 #include <string>
 
 #include "CSV.h"
+#include "Title.h"
+#include "Play.h"
 
 GameScene::GameScene() {}
 
@@ -16,6 +18,8 @@ void GameScene::Initialize() {
 	dxCommon_ = DirectXCommon::GetInstance();
 	input_ = Input::GetInstance();
 	audio_ = Audio::GetInstance();
+
+	effectManager_ = new EffectManager;
 
 	sphere_.reset(Model::CreateFromOBJ("sphere", true));
 
@@ -29,14 +33,51 @@ void GameScene::Initialize() {
 	}
 
 	player_ = std::make_unique<Player>();
-	player_->Initialize();
+	player_->Initialize(effectManager_);
 	
 
 	viewProjection_.farZ = 10000.0f;
 	viewProjection_.Initialize();
+
+	// シーン
+	// sceneRetention_[SCENE::TITLE] = std::make_unique<TitleScene>();
+	sceneRetention_[SCENE::TITLE] = std::make_unique<Title>();
+	sceneRetention_[SCENE::PLAY] = std::make_unique<Play>();
+	sceneNo_ = SCENE::TITLE;
+	sceneRetention_[sceneNo_]->Initialize();
+
 }
 
-void GameScene::Update() { player_->Update(); }
+void GameScene::Update() { 
+	// シーンのチェック
+	prevSceneNo_ = sceneNo_;
+	sceneNo_ = sceneRetention_[sceneNo_]->GetSceneNo();
+
+	// シーン変更チェック
+	if (prevSceneNo_ != sceneNo_) {
+		sceneRetention_[sceneNo_]->Initialize();
+	}
+
+	sceneRetention_[sceneNo_]->Update();
+	player_->Update();
+	effectManager_->Update();
+	if (input_->PushKey(DIK_SPACE)) {
+		for (Block* block : blocks_) {
+			delete block;
+		}
+		blocks_.clear();
+	}
+	if (input_->PushKey(DIK_P)) {
+		// CSVからデータの読み込み
+		std::unique_ptr<CSV> csv = std::make_unique<CSV>();
+		csv->LoadPopData();
+		std::vector<CSV::Pop> pops = csv->UpdataPopCommands();
+		// 読み込んだデータから生成
+		for (CSV::Pop pop : pops) {
+			Pop(pop.position, pop.type);
+		}
+	}
+}
 
 void GameScene::Draw() {
 
@@ -68,6 +109,7 @@ void GameScene::Draw() {
 	
 	}
 	player_->Draw(viewProjection_);
+	sceneRetention_[sceneNo_]->Draw();
 	/// </summary>
 
 	// 3Dオブジェクト描画後処理
@@ -80,6 +122,7 @@ void GameScene::Draw() {
 
 	/// <summary>
 	/// ここに前景スプライトの描画処理を追加できる
+	effectManager_->Draw();
 	/// </summary>
 
 	// スプライト描画後処理

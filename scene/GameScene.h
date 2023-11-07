@@ -11,6 +11,9 @@
 
 #include "Block.h"
 #include "Player.h"
+#include "Bubble.h"
+#include "EffectManager.h"
+#include "IScene.h"
 
 #include <memory>
 #include <vector>
@@ -71,7 +74,14 @@ private: // メンバ変数
 
 	ViewProjection viewProjection_;
 
+	EffectManager* effectManager_;
+
 	std::unique_ptr<Model> sphere_;
+
+	std::unique_ptr<IScene> sceneRetention_[2];
+	// シーンを管理する変数
+	uint32_t sceneNo_;
+	uint32_t prevSceneNo_;
 
 	// 発生コマンド
 	//std::stringstream popCommands_;
